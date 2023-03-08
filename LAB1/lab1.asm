@@ -4,11 +4,14 @@ ORG 0
 ; Test procedury - wywolanie jednorazowe
 ;---------------------------------------------------------------------
 	mov	R0, 	#30h	; liczba w komorkach IRAM 30h i 31h
-	;lcall	dec_iram	; wywolanie procedury
 	
+	;lcall	dec_iram	; wywolanie procedury
+	;lcall 	inc_xram
 	;lcall 	sub_iram
 	;lcall	set_bits
-	lcall 	get_code_const
+	;lcall 	shift_left
+	;lcall 	get_code_const
+	lcall 	swap_regs
 	
 	sjmp	$			; petla bez konca
 
@@ -176,8 +179,23 @@ get_code_const:
 ;---------------------------------------------------------------------
 swap_regs:
 
-	
+	mov DPTR, #1234h
+	mov R7, #78h
+	mov R6, #56h
+	mov A, #99		; poczatkowa wartosc akumulatora
 
+	push ACC		; wrzaucamy na stos => przesuwamy STACK POINTER o 1, arumentem instrukcji puch jest adres, w tym przypadku adres akumulatora, czyli ACC
+	
+	mov A, DPH		; kopiujemy wartosc starczego bajtu DPTR
+	xch A, R7		; zamieniamy wartosci
+	mov DPH, A
+	
+	mov A, DPL
+	xch A, R6
+	mov DPL, A		
+	
+	pop ACC			; akumulator wraca do stanu poczatkowego, STACK POINTER zmiejszamy o 1
+	
 	ret
 
 ;---------------------------------------------------------------------
