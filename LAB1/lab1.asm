@@ -5,17 +5,23 @@ ORG 0
 	;mov	R0, 	#30h	; liczba w komorkach IRAM 30h i 31h
 	;lcall	dec_iram	; wywolanie procedury
 ;---------------------------------------------------------------------
+
+	; test zadania 1
+	;lcall	loop_dec_iram
+	
+	; test zadania 2
+	;lcall	loop_inc_xram
 	
 	; test zadania 3
 	;lcall 	sub_iram_setup		; ustawienie wartosci rejestrow
 	;lcall 	sub_iram			; zadanie 3 => dzialanie procedury mozna obserwowac wpisujac D:30h
 	
 	; test zadania 4
-	;lcall	set_bits_and_shosft_left_setup
+	;lcall	set_bits_and_shift_left_setup
 	;lcall	set_bits
 	
 	; test zadania 5
-	;lcall	set_bits_and_shosft_left_setup
+	;lcall	set_bits_and_shift_left_setup
 	;lcall	shift_left
 	
 	; test zadania 6
@@ -26,10 +32,10 @@ ORG 0
 	;lcall	swap_regs
 	
 	; test zadania 8
-	mov DPTR, #8000h
-	mov R2, #4h					; wybieramy dlugosc obszaru w jakim chcemy wykonac operacje
-	lcall	add_xram
-		
+	;mov DPTR, #8000h
+	;mov R2, #4h					; wybieramy dlugosc obszaru w jakim chcemy wykonac operacje
+	;lcall	add_xram
+
 ;---------------------------------------------------------------------	
 	;lcall 	inc_xram
 	;lcall	set_bits
@@ -37,6 +43,7 @@ ORG 0
 	;lcall 	get_code_const
 	;lcall 	swap_regs
 	;lcall	add_xram
+	
 	sjmp	$			; petla bez konca
 
 ; ustawienie wartosci rejestrow dla zadania 3
@@ -51,7 +58,7 @@ sub_iram_setup:
 ret
 
 ; ustawianie wartosci rejestrow dla zadania 4 oraz 5
-set_bits_and_shosft_left_setup:
+set_bits_and_shift_left_setup:
 	; wpisujemy liczby pod adresy
 	mov R7, #43h
 	mov R6, #21h
@@ -64,23 +71,10 @@ swap_regs_setup:
 	mov R6, #56h
 	mov A, #99h		; poczatkowa wartosc akumulatora
 ret
-;=====================================================================
-;---------------------------------------------------------------------
-; TESTOWANIE procedur WYWOLANIEM POWTARZANYM
-;---------------------------------------------------------------------
-	
-	; test zadania 1
-	;lcall loop_dec_iram		; procedura do zadania 1
-	
-	; test zadania 2
-	;lcall loop_inc_xram		; procedura do zadania 2
-	
-	
-	sjmp	$			; petla bez konca
+
 ;---------------------------------------------------------------------
 ; Test procedury - wywolanie powtarzane
 ;---------------------------------------------------------------------
-
 
 ;loop:	
 ;	mov	DPTR, #8000h	; liczba w komorkach XRAM 8000h i 8001h
@@ -88,7 +82,7 @@ ret
 ;	sjmp	loop		; powtarzanie
 	
 
-; test zadania 1	
+; test zadania 1 w petli	
 loop_dec_iram:	
 
 	mov R0, #30h		; adres poczatkowy poczatkowy w obszarze w ktorym mozemy przechowywac liczbe
@@ -97,7 +91,7 @@ loop_dec_iram:
 sjmp loop_dec_iram
 
 
-; test zadania 2
+; test zadania 2 w petli
 loop_inc_xram:
 
 	mov DPTR, #8000h	; do rejestru DPTR przekazujemy miejsce a pamieci XRAM
@@ -125,6 +119,15 @@ dec_iram:
 	
 	ret
 
+; 2 sposob
+    cjne @R0, #00h, not_0
+    inc R0
+    dec @R0
+    dec R0
+not_0:
+    dec @R0	
+    ret
+	
 ;---------------------------------------------------------------------
 ; Inkrementacja liczby dwubajtowej w pamieci zewnetrznej (XRAM)								zadanie 2
 ; DPTR - adres mlodszego bajtu (Lo) liczby
@@ -156,7 +159,7 @@ sub_iram:
 	subb A, @R1
 	mov @R0, A
 	
-	
+	; jesli mamy przeniesienie
 	inc R0				; przejscie	dos starszego bitu odjemnej
 	mov A, @R0
 	subb A, #0
@@ -217,13 +220,14 @@ shift_left:
 ;---------------------------------------------------------------------
 get_code_const:
 
+	clr A
 	mov DPTR, #code_const	; umieszczenie danych w pamieci pod etykieta
 	movc A, @A+DPTR
-	mov R7, A
+	mov R6, A
 	inc DPTR
 	clr A
 	movc A, @A+DPTR
-	mov R6, A
+	mov R7, A
 
 	ret
 
@@ -247,6 +251,20 @@ swap_regs:
 	
 	ret
 
+; 2 sposob
+	push DPH
+	pop ACC
+	xch A, R7		
+	push ACC		; odkladay wartosc R7 na stos
+	pop DPH			; pobieramy wartosc ze stosu do DPH
+	
+	push DPL
+	pop ACC
+	xch A, R6
+	push ACC
+	pop DPL
+	
+	ret
 ;---------------------------------------------------------------------
 ; Dodanie 10 do danych w obszarze pamieci zewnetrznej (XRAM)								zadanie 8
 ; DPTR - adres poczatku obszaru
@@ -264,8 +282,6 @@ do:
 	;djnz R2, add_xram
 	dec R2
 	sjmp add_xram
-
-	ret
 
 ;---------------------------------------------------------------------
 code_const:
