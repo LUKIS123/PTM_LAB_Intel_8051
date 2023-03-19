@@ -7,7 +7,7 @@ ORG 0
 ;---------------------------------------------------------------------
 
 	; test zadania 1
-	;lcall	loop_dec_iram
+	lcall	loop_dec_iram
 	
 	; test zadania 2
 	;lcall	loop_inc_xram
@@ -25,6 +25,7 @@ ORG 0
 	;lcall	shift_left
 	
 	; test zadania 6
+	;mov DPTR, #code_const	; umieszczenie danych w pamieci pod etykieta
 	;lcall	get_code_const
 	
 	; test zadania 7
@@ -37,22 +38,16 @@ ORG 0
 	;lcall	add_xram
 
 ;---------------------------------------------------------------------	
-	;lcall 	inc_xram
-	;lcall	set_bits
-	;lcall 	shift_left
-	;lcall 	get_code_const
-	;lcall 	swap_regs
-	;lcall	add_xram
-	
+
 	sjmp	$			; petla bez konca
 
 ; ustawienie wartosci rejestrow dla zadania 3
 sub_iram_setup:
 	; adresy
 	mov R0, #30h		; mlodszy bajt odjemnej	A
-	mov R1, #56h		; mlodszy bajt odjemnika B
+	mov R1, #46h		; mlodszy bajt odjemnika B
 	
-	; wpisujemy liczby pod adres
+	; wpisujemy liczby pod adres mlodszego bajtu/ niepotrzebne
 	mov @R0, #10h
 	mov @R1, #2h
 ret
@@ -75,12 +70,10 @@ ret
 ;---------------------------------------------------------------------
 ; Test procedury - wywolanie powtarzane
 ;---------------------------------------------------------------------
-
 ;loop:	
 ;	mov	DPTR, #8000h	; liczba w komorkach XRAM 8000h i 8001h
 ;	lcall	inc_xram	; wywolanie procedury
 ;	sjmp	loop		; powtarzanie
-	
 
 ; test zadania 1 w petli	
 loop_dec_iram:	
@@ -120,12 +113,11 @@ dec_iram:
 	ret
 
 ; 2 sposob
-    cjne @R0, #00h, not_0
+    dec @R0	
+    cjne @R0, #0FFh, not_0
     inc R0
     dec @R0
-    dec R0
 not_0:
-    dec @R0	
     ret
 	
 ;---------------------------------------------------------------------
@@ -133,14 +125,14 @@ not_0:
 ; DPTR - adres mlodszego bajtu (Lo) liczby
 ;---------------------------------------------------------------------
 inc_xram:
-
 	movx A, @DPTR		; kopiujemy wartosc pamieci pod adresem przechowywanym w rejestrze DPTR do akumulatora za pomoca movx, adres 2 bajtowy wskazuje na 1 bajt pamieci
 	clr C				; czyscimy C, w teorii niepotrzbne
 	add A, #1			; inkrementacja, add nie uwzglednia flagi C
 	movx @DPTR, A		; odstawiamy akumulator do pamieci zewnetrznej pod adresem @DPTR
+
 	inc DPTR			; przesuwamy sie na starszy bit liczby
 	movx A, @DPTR		; kopiujemy wartosc pamieci spod zinkrementowanego DPTR
-	addc A, #0			; w razie grzyby bylo przeniesienie
+	addc A, #0			; w razie gdyby bylo przeniesienie
 	movx @DPTR, A		; odstawiamy na miejsce
 
 	ret
@@ -151,22 +143,16 @@ inc_xram:
 ; R1 - adres mlodszego bajtu (Lo) odjemnika B
 ;---------------------------------------------------------------------
 sub_iram:
-	
-	clr C				
-	
-	
+
 	mov A, @R0
+	clr C				
 	subb A, @R1
 	mov @R0, A
 	
-	; jesli mamy przeniesienie
 	inc R0				; przejscie	dos starszego bitu odjemnej
-	mov A, @R0
-	subb A, #0
-	
-	
-	clr C				; niepotrzebne
 	inc R1
+
+	mov A, @R0
 	subb A, @R1
 	mov @R0, A
 
@@ -187,7 +173,7 @@ set_bits:
 	; 0111 0101
 	
 	mov A, R7
-	orl A, #55h			; 55h => kod parzysty w hex = 0101 0101
+	orl A, #01010101b		; 55h => kod parzysty w hex = 0101 0101
 	mov R7, A
 	
 	mov A, R6
@@ -221,7 +207,6 @@ shift_left:
 get_code_const:
 
 	clr A
-	mov DPTR, #code_const	; umieszczenie danych w pamieci pod etykieta
 	movc A, @A+DPTR
 	mov R6, A
 	inc DPTR
@@ -276,13 +261,24 @@ add_xram:
 	ret
 do:
 	movx A, @DPTR
-	add A, #0Ah
+	add A, #10
 	movx @DPTR, A
 	inc dptr
 	;djnz R2, add_xram
 	dec R2
 	sjmp add_xram
 
+	; 2 sposob
+	mov A, R2
+	jz koniec
+loop:
+	movx A, @DPTR
+	add A, #10
+	movx @DPTR, A
+	inc DPTR
+	djnz R2, loop
+koniec:
+	ret
 ;---------------------------------------------------------------------
 code_const:
 	DB	LOW(1234h)
