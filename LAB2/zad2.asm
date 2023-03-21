@@ -157,8 +157,7 @@ count_even_gt10:
 	mov A, R2
 	jz koniec_5					;jesli obszar ma dlugosc 0 to zakoncz - mozna sprawdzac bezposrednio innym skokiem zamiast przekladac do A
 	
-	setb C						;ustawienie CY = 1, bo cjne sprawdza tylko A < data (ma byc A <= data)
-	cjne @R0,#0Ah, next
+	cjne @R0,#0Bh, next
 next:
 	jc nastepna_liczba 			;sprawdzenie czy >10
 	mov A, @R0
