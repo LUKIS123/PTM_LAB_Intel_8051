@@ -1,5 +1,6 @@
 ORG 0
-
+	
+	sjmp	test_sum_iram
 	sjmp	test_copy_xram_xram	; przyklad testu wybranej procedury
 
 test_sum_iram:
@@ -43,8 +44,24 @@ test_count_even_gt10:
 ;          R2    - dlugosc bloku danych
 ; Wyjscie: R7|R6 - 16-bit suma elementow bloku (Hi|Lo)
 ;---------------------------------------------------------------------
+nastepny_bajt:
+	dec R2
+	inc R0
 sum_iram:
-
+	mov A, R2
+	jz koniec
+	
+	clr C
+	mov A, R6
+	add A, @R0
+	mov R6, A
+	
+	mov A, R7
+	addc A, #00h
+	mov R7, A
+	
+	sjmp nastepny_bajt		
+koniec:
 	ret
 
 ;---------------------------------------------------------------------
