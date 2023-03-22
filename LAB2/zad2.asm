@@ -44,10 +44,16 @@ test_count_even_gt10:
 ;          R2    - dlugosc bloku danych
 ; Wyjscie: R7|R6 - 16-bit suma elementow bloku (Hi|Lo)
 ;---------------------------------------------------------------------
+sum_iram:
+	mov R7, #00h
+	mov R6, #00h
+	sjmp po_wyzerowaniu
+	
 nastepny_bajt:
 	dec R2
 	inc R0
-sum_iram:
+	
+po_wyzerowaniu:
 	mov A, R2
 	jz koniec
 	
@@ -166,11 +172,15 @@ koniec_4:
 ;          R2 - dlugosc bloku danych
 ; Wyjscie: A  - liczba elementow spelniajacych warunek
 ;---------------------------------------------------------------------
+count_even_gt10:
+	mov R1, #00h
+	sjmp po_wyzerowaniu_licznika
+	
 nastepna_liczba:
 	dec R2
 	inc R0
 	
-count_even_gt10:
+po_wyzerowaniu_licznika:
 	mov A, R2
 	jz koniec_5					;jesli obszar ma dlugosc 0 to zakoncz - mozna sprawdzac bezposrednio innym skokiem zamiast przekladac do A
 	
