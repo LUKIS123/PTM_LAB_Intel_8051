@@ -190,6 +190,13 @@ next:
 	mov A, @R0
 	jb ACC.0, nastepna_liczba	;sprawdzenie czy parzysta
 	inc R1
+	
+		; inny sposob sprawdzenia
+		; clr C
+		; rrc A 
+		; inc R1
+		; jc nastepna_liczba
+	
 	sjmp nastepna_liczba		;kolejne wykonanie
 	
 koniec_5:
