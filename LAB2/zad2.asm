@@ -18,8 +18,8 @@ test_copy_iram_iram_inv:
 
 test_copy_xram_iram_z:
 	mov	DPTR, #8000h	; adres poczatkowy obszaru zrodlowego
-	mov	R0, #30h	; adres poczatkowy obszaru docelowego
-	mov	R2, #4		; dlugosc obszaru
+	mov	R0, #30h		; adres poczatkowy obszaru docelowego
+	mov	R2, #4			; dlugosc obszaru
 	lcall	copy_xram_iram_z
 	sjmp	$
 
@@ -79,13 +79,13 @@ koniec:
 ;---------------------------------------------------------------------
 copy_iram_iram_inv:
 	mov A, R2
-	jz koniec_2	;jesli obszar ma dlugosc 0 to zakoncz
+	jz koniec_2		;jesli obszar ma dlugosc 0 to zakoncz
 	
 	clr A
 	mov A, R1
 	add A, R2
 	subb A, #1
-	mov R1, A	;R1 wskazuje na ostatni bajt obszaru docelowego
+	mov R1, A		;R1 wskazuje na ostatni bajt obszaru docelowego
 	
 loop:
 	mov A, @R0
@@ -107,7 +107,7 @@ koniec_2:
 ;---------------------------------------------------------------------
 copy_xram_iram_z:
 	mov A, R2
-	jz koniec_3	;jesli obszar ma dlugosc 0 to zakoncz
+	jz koniec_3		;jesli obszar ma dlugosc 0 to zakoncz
 	
 	movx A, @DPTR
 	inc DPTR
