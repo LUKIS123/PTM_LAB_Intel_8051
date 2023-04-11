@@ -13,9 +13,10 @@ HOUR		EQU	33h			; godziny
 
 ORG 0
 	
-	; lcall delay_timer_10ms
+	lcall delay_timer_10ms
 	; lcall init_time
-	lcall leds_loop
+	mov	R7, #5
+	lcall delay_nx10ms
 	sjmp $
 
 	lcall	init_time		; inicjowanie czasu
@@ -23,11 +24,11 @@ time_loop:
 	lcall	delay_10ms		; opoznienie 10 ms
 	lcall	update_time		; aktualizacja czasu
 	jnc		time_loop		; nie bylo zmiany sekund
-					; tutaj zmiana sekund
+	lcall	update_seconds	; tutaj zmiana sekund
 	sjmp	time_loop
 
 leds_loop:
-	mov	R7, #50					; opoznienie 500 ms
+	mov	R7, #5					; opoznienie 500 ms
 	lcall	delay_nx10ms
 	lcall	leds_change_2		; zmiana stanu diod
 	sjmp	leds_loop
@@ -36,15 +37,15 @@ leds_loop:
 ; Opoznienie 10 ms (zegar 12 MHz) -- 10 000 us
 ;---------------------------------------------------------------------
 delay_10ms:						;2 lcall
-	mov	R7, #45					;1
+	mov	R6, #45					;1
 	
 external_loop:
-	mov R6, #109				;1 * 45
+	mov R5, #109				;1 * 45
 	
 	internal_loop:
-		djnz R6, internal_loop	;2 * 109 * 45 = 9810
+		djnz R5, internal_loop	;2 * 109 * 45 = 9810
 		nop						;1 * 45
-	djnz R7, external_loop		;2 * 45 = 90
+	djnz R6, external_loop		;2 * 45 = 90
 	
 	nop
 	nop
@@ -59,11 +60,10 @@ external_loop:
 ; Opoznienie n * 10 ms (zegar 12 MHz)
 ; R7 - czas x 10 ms
 ;---------------------------------------------------------------------
-delay_nx10ms:					; 2 lcall	
-
-	; lipa...
+delay_nx10ms:					;	
+	lcall delay_10ms			;
+	djnz R7, delay_nx10ms		;
 	
-koniec:
 	ret
 
 ;---------------------------------------------------------------------
@@ -96,10 +96,10 @@ inc_by_pevious_cycles:
 ;---------------------------------------------------------------------
 init_time:
 
-	mov	SEC_100, #99
-	mov	SEC, #59
-	mov	MIN, #59
-	mov	HOUR, #23
+	mov	SEC_100, #0
+	mov	SEC, #0
+	mov	MIN, #0
+	mov	HOUR, #0
 	
 	ret
 
@@ -111,9 +111,50 @@ init_time:
 ; Wyjscie: CY - sygnalizacja zmiany sekund (0 - nie, 1 - tak)
 ;---------------------------------------------------------------------
 update_time:
-
+	inc SEC_100
+	mov R0, SEC_100
+	CJNE R0, #100, update_end_no_flag
+	mov SEC_100, #0
+	setb C
+	sjmp update_end
+	
+update_end_no_flag:
+	clr C
+update_end:
 	ret
-
+	
+;---------------------------------------------------------------------
+update_seconds:
+	inc SEC
+	mov R0, SEC
+	CJNE R0, #60, update_seconds_end
+	mov SEC, #0
+	sjmp update_minutes
+	
+update_seconds_end:
+	ret
+	
+;----------------------------------------------------------------------
+update_minutes:
+	inc MIN
+	mov R0, MIN
+	CJNE R0, #60, update_minutes_end
+	mov MIN, #0
+	sjmp update_hours
+	
+update_minutes_end:
+	ret
+	
+;---------------------------------------------------------------------
+update_hours:
+	inc HOUR
+	mov R0, HOUR
+	CJNE R0, #24, update_hours_end
+	mov HOUR, #0
+	
+update_hours_end:
+	ret
+	
 ;---------------------------------------------------------------------
 ; Zmiana stanu LEDS - wedrujaca w lewo dioda
 ;---------------------------------------------------------------------
