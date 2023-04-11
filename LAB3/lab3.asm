@@ -15,7 +15,6 @@ ORG 0
 	
 	; lcall delay_timer_10ms
 	; lcall init_time
-	; lcall leds_change_1
 	lcall leds_loop
 	sjmp $
 
@@ -30,7 +29,7 @@ time_loop:
 leds_loop:
 	mov	R7, #50					; opoznienie 500 ms
 	lcall	delay_nx10ms
-	lcall	leds_change_1		; zmiana stanu diod
+	lcall	leds_change_2		; zmiana stanu diod
 	sjmp	leds_loop
 
 ;---------------------------------------------------------------------
@@ -137,8 +136,23 @@ leds_1_end:
 ; Zmiana stanu LEDS - narastajacy pasek od prawej
 ;---------------------------------------------------------------------
 leds_change_2:
-
-
+	mov A, LEDS
+	cjne A, #11111111b, leds_2_next_reset	; jesli konfiguracja poczatkowa
+	clr LEDS.0								; to zapal diode na najmlodszej pozycji
+	sjmp leds_2_end
+	
+leds_2_next_reset:
+	mov A, LEDS
+	cjne A, #00000000b, leds_2_next_next	; jesli wszystkie diody sie pala
+	mov A, #11111111b						; przywroc konfiguracje poczatkowa
+	mov LEDS, A
+	sjmp leds_2_end
+	
+leds_2_next_next:
+	mov A, LEDS								; przypadek w ktorym nalezy zwiekszyc pasek o kolejna diode
+	rl A									; przesuniecie bitowe
+	anl A, #11111110b						; and 11111110
+	mov LEDS, A
 
 leds_2_end:
 	ret
