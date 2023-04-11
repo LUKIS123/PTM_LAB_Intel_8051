@@ -1,6 +1,6 @@
 ORG 0
 	
-	sjmp	test_sum_iram
+	sjmp	test_count_even_gt10
 	sjmp	test_copy_xram_xram	; przyklad testu wybranej procedury
 
 test_sum_iram:
@@ -198,6 +198,41 @@ next:
 		; jc nastepna_liczba
 	
 	sjmp nastepna_liczba		;kolejne wykonanie
+	
+koniec_5:
+	mov A, R1
+	ret
+
+;---------------------------------------------------------------------
+count_even_gt10:
+	mov R1, #00h				;wyzerowanie licznika
+	mov A, R2
+	jz koniec_5					;jesli obszar ma dlugosc 0 to zakoncz
+	sjmp etykieta
+	
+nastepna_liczba:
+	dec R2
+	
+nastepna_liczba_zliczona:
+	mov A, R2
+	jz koniec_5					;jesli obszar ma dlugosc 0 to zakoncz
+	inc R0
+
+etykieta:
+	cjne @R0,#11, next
+next:
+	jc nastepna_liczba 			;sprawdzenie czy >10
+	mov A, @R0
+	jb ACC.0, nastepna_liczba	;sprawdzenie czy parzysta
+	inc R1
+	
+		; inny sposob sprawdzenia
+		; clr C
+		; rrc A 
+		; inc R1
+		; jc nastepna_liczba
+	
+	djnz R2, nastepna_liczba_zliczona		;kolejne wykonanie
 	
 koniec_5:
 	mov A, R1
