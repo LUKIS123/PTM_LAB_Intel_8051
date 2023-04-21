@@ -63,7 +63,7 @@ check_stat_loop_1:
 lcd_write_data:
 	
 	push	DPH
-	push	DPH
+	push	DPL
 	
 	push	ACC			; chornione sa DPTR oraz ACC
 
@@ -103,6 +103,15 @@ lcd_init:
 ; Wejscie: A - pozycja na wyswietlaczu: ---y | xxxx
 ;---------------------------------------------------------------------
 lcd_gotoxy:
+	jnb		ACC.4, lcd_gotoxy_skip		; jesli adres w linii 1 to adres taki jak wspolrzedna x
+										; w przeciwnym wypadku 14 -> 44 czyli 0001 0100 -> 0100 0100
+										; pozostale analogicznie
+	setb	ACC.6
+	clr		ACC.4
+	
+lcd_gotoxy_skip:
+	setb	ACC.7						; bit komendy
+	lcall	lcd_write_cmd
 
 	ret
 
@@ -112,7 +121,16 @@ lcd_gotoxy:
 ; Wejscie: DPTR - adres pierwszego znaku tekstu w pamieci kodu
 ;---------------------------------------------------------------------
 lcd_puts:
+	clr		A
+	movc 	A, @A+DPTR
+	jz 		koniec_lcd_puts
+	
+	lcall	lcd_write_data
+	
+	inc		DPTR
+	sjmp	lcd_puts
 
+koniec_lcd_puts:
 	ret
 
 ;---------------------------------------------------------------------
