@@ -3,6 +3,8 @@ WR_DATA		EQU	0FF2Dh		; zapis rejestru danych
 RD_STAT		EQU	0FF2Eh		; odczyt rejestru statusu
 RD_DATA		EQU	0FF2Fh		; odczyt rejestru danych
 
+X_DATA		SEGMENT		XDATA	
+
 ORG 0
 	lcall lcd_write_cmd
 
@@ -22,6 +24,10 @@ ORG 0
 
 	mov	A, #12			; wyswietlenie liczby
 	lcall	lcd_dec_2
+	
+	; wyswietlanie wlasnego znaku
+	mov A, #0
+	movx	DPTR, #def_char_tab
 
 	sjmp	$
 
@@ -139,6 +145,21 @@ koniec_lcd_puts:
 ; Wejscie: A - liczba do wyswietlenia (00 ... 99)
 ;---------------------------------------------------------------------
 lcd_dec_2:
+	mov		B, #10
+	div 	AB
+	add 	A, #'0'
+	mov		DPTR, #number_print1
+	movx	@DPTR, A
+	mov		A, B
+	add 	A, #'0'
+	inc		DPTR
+	movx	@DPTR, A
+	mov		A, #0
+	inc		DPTR
+	movx	@DPTR, A
+
+	mov		DPTR, #number_print1
+	lcall	lcd_puts
 
 	ret
 
@@ -147,8 +168,23 @@ lcd_dec_2:
 ;
 ; Wejscie: A    - kod znaku (0 ... 7)
 ;          DPTR	- adres tabeli opisu znaku w pamieci kodu
+;
+;	mov A, #0
+;	movx	DPTR, #def_char_tab
 ;---------------------------------------------------------------------
 lcd_def_char:
+	; mov		A, #01000000b
+	rl		A
+	rl		A
+	rl		A
+	setb	A.6
+	
+	lcall	lcd_write_cmd
+
+	lcall	lcd_puts
+
+	mov		A, #10000000b
+	lcall	lcd_write_cmd
 
 	ret
 
@@ -156,5 +192,14 @@ text_hello:
 	db	'Hello word', 0
 text_number:
 	db	'Number = ', 0
+
+; alokacja pamieci na liczbe do wypisania
+RSEG	X_DATA
+number_print1:
+	ds 3
+
+; definicja wlasnego znaku
+def_char_tab:
+	db 0Eh, 0Eh, 0Eh, 0Eh, 0Eh, 1Fh, 1Bh, 1Bh
 
 END
