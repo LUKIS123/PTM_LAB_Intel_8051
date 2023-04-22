@@ -70,21 +70,21 @@ delay_nx10ms:					;
 ; Opoznienie 10 ms z uzyciem Timera 0 (zegar 12 MHz)
 ;---------------------------------------------------------------------
 ; Poprawa
-delay_timer_10ms:
-	clr TR0						
-	anl	TMOD, #11110000b		
-	orl	TMOD, #00000001b		
-	mov TL0, #02h				
-	mov TH0, #0D9h				
+delay_timer_10ms:				; 2
+	clr TR0						; 1
+	anl	TMOD, #11110000b		; 2
+	orl	TMOD, #00000001b		; 2
+	mov TL0, #02h				; 1
+	mov TH0, #0D9h				; 1	- zawiera liczbe 55554, liczy do 65536
+								; 	czyli przepelni sie po 9983 cyklach
+	clr TF0						; 1
+	setb TR0					; 1
 
-	clr TF0						
-	setb TR0
+	jnb TF0, $				   	; 2 + 9984 - opoznienie z timera + 2 za kolejne sprawdzenie flagi przepelnienia
+	nop							; 1
 
-	jnb TF0, $				   	
-	nop
-
-	ret
-
+	ret							; 2
+								; 10 000
 ;---------------------------------------------------------------------
 ; Inicjowanie czasu w zmiennych: HOUR, MIN, SEC, SEC_100
 ;---------------------------------------------------------------------
