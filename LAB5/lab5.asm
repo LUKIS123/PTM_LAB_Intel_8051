@@ -11,7 +11,10 @@ HOUR		EQU	33h		; godziny
 ALARM_SEC	EQU	34h			; alarm - sekundy
 ALARM_MIN	EQU	35h			; alarm - minuty
 ALARM_HOUR	EQU	36h			; alarm - godziny
-
+	
+;------------------------------------------------------------------------------
+ALARM_DURATION	EQU	37h			; alarm - pozostaly czas trwania [s]
+;------------------------------------------------------------------------------
 SEC_CHANGE	EQU	0			; flaga zmiany sekund (BIT)
 ;------------------------------------------------------------------------------
 LEDS		EQU	P1				; diody LED na P1 (0=ON)
@@ -19,8 +22,8 @@ ALARM		EQU	P1.7			; sygnalizacja alarmu
 ;------------------------------------------------------------------------------
 
 ;------------------------------------------------------------------------------
+; dodane -> do obslugi wyswietlacza + alokacja pamieci na wyswietlany tekst
 ;------------------------------------------------------------------------------
-; dodane -> do obslugi wyswietlacza
 WR_CMD		EQU	0FF2Ch		; zapis rejestru komend
 WR_DATA		EQU	0FF2Dh		; zapis rejestru danych
 RD_STAT		EQU	0FF2Eh		; odczyt rejestru statusu
@@ -76,6 +79,8 @@ update_seconds_end:
 ; Start programu
 ;---------------------------------------------------------------------
 start:
+	mov 	ALARM_DURATION, #10
+	lcall	lcd_init		; inicjowanie wyswietlacza
 
 ;---------------------------------------------------------------------
 ; Petla glowna programu
@@ -137,23 +142,29 @@ lcd_gotoxy_skip:
 	lcall	lcd_write_cmd
 	
 ;------- wyswietlenie godzin
-	mov		A, #HOUR			; wyswietlenie liczby
+	mov		A, HOUR			; wyswietlenie liczby
 	lcall	lcd_dec_2
 
 ;------- wyswietlenie dwukropka rozdzielajacego godziny i minuty
-	mov	DPTR, #text_dwukropek	; wyswietlenie tekstu
+	mov		A, SEC
+	jb		ACC.0, minuty
+	mov		DPTR, #text_dwukropek	; wyswietlenie tekstu
 	lcall	lcd_puts
 	
 ;------- wyswietlenie minut
-	mov		A, #MIN			; wyswietlenie liczby
+minuty:
+	mov		A, MIN			; wyswietlenie liczby
 	lcall	lcd_dec_2
 
 ;------- wyswietlenie dwukropka rozdzielajacego godziny i sekundy
-	mov	DPTR, #text_dwukropek	; wyswietlenie tekstu
+	mov		A, SEC
+	jb		ACC.0, sekundy
+	mov		DPTR, #text_dwukropek	; wyswietlenie tekstu
 	lcall	lcd_puts
 	
+sekundy:	
 ;------- wyswietlenie sekund
-	mov		A, #SEC			; wyswietlenie liczby
+	mov		A, SEC			; wyswietlenie liczby
 	lcall	lcd_dec_2
 
 	ret
@@ -235,22 +246,43 @@ lcd_init:
 	mov		A, #00000001b		; wyczyszczenie wyswietlacza
 	lcall	lcd_write_cmd
 	ret
-
-
 ;---------------------------------------------------------------------
+
 ;---------------------------------------------------------------------
 ; Obsluga alarmu
 ;---------------------------------------------------------------------
 clock_alarm:
+	jnb		ALARM, clock_alarm_duration		; jesli alarm zostal juz uruchomiony
+	
+	mov		A, SEC
+	cjne 	A, ALARM_SEC, clock_alarm_return
+	
+	mov		A, MIN
+	cjne 	A, ALARM_MIN, clock_alarm_return
+	
+	mov  	A,	HOUR
+	cjne 	A,	ALARM_HOUR, clock_alarm_return
+	
+	clr  	ALARM				; alarm zostaje wlaczony - sygnalizacja
+	dec		ALARM_DURATION
+	sjmp	clock_alarm_return
 
+clock_alarm_duration:
+	dec		ALARM_DURATION
+	mov		A, ALARM_DURATION
+	jnz		clock_alarm_return	
+	
+clock_alarm_off:
+	jb   	ALARM,	clock_alarm_return		; alarm wylaczony -> nie - powrot/ tak - wylacz
+	setb 	ALARM
+	mov		ALARM_DURATION, #10				; reset licznika
+
+clock_alarm_return:
 	ret
-
-
-
 
 ;---------------------------------------------------------------------
 text_dwukropek:
-	db	' : ', 0
+	db	':', 0
 ; alokacja pamieci na liczbe do wypisania
 RSEG	X_DATA
 number_print1:
