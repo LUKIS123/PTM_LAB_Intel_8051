@@ -15,7 +15,7 @@ ALARM_HOUR	EQU	36h			; alarm - godziny
 ;------------------------------------------------------------------------------
 ALARM_DURATION	EQU	37h			; alarm - pozostaly czas trwania [s]
 ;------------------------------------------------------------------------------
-SEC_CHANGE	EQU	0			; flaga zmiany sekund (BIT)
+SEC_CHANGE	EQU	0				; flaga zmiany sekund (BIT)
 ;------------------------------------------------------------------------------
 LEDS		EQU	P1				; diody LED na P1 (0=ON)
 ALARM		EQU	P1.7			; sygnalizacja alarmu
@@ -80,13 +80,23 @@ update_seconds_end:
 ;---------------------------------------------------------------------
 start:
 	mov 	ALARM_DURATION, #10
-	lcall	lcd_init		; inicjowanie wyswietlacza
+	mov		LEDS, #11111111b	; wylaczenie ledow na wszelki wypadek
+	lcall	lcd_init			; inicjowanie wyswietlacza
+	lcall	timer_init
+	lcall	clock_init
 
 ;---------------------------------------------------------------------
 ; Petla glowna programu
 ;---------------------------------------------------------------------
 main_loop:
-
+	jnb SEC_CHANGE, other_tasks	;if sec_change == 0, rob pozostale zadania
+	clr SEC_CHANGE
+	lcall clock_display
+	lcall clock_alarm
+	
+other_tasks:
+	;...
+	
 	sjmp	main_loop
 
 ;---------------------------------------------------------------------
