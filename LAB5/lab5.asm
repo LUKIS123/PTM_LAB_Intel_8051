@@ -15,7 +15,7 @@ ALARM_HOUR	EQU	36h			; alarm - godziny
 ;------------------------------------------------------------------------------
 ALARM_DURATION	EQU	37h			; alarm - pozostaly czas trwania [s]
 ;------------------------------------------------------------------------------
-SEC_CHANGE	EQU	0			; flaga zmiany sekund (BIT)
+SEC_CHANGE	EQU	0				; flaga zmiany sekund (BIT)
 ;------------------------------------------------------------------------------
 LEDS		EQU	P1				; diody LED na P1 (0=ON)
 ALARM		EQU	P1.7			; sygnalizacja alarmu
@@ -39,8 +39,8 @@ CSEG AT 0Bh
 ; Obsluga przerwania Timera 0
 ;---------------------------------------------------------------------
 T0_int:
-	mov		TL0, #LOW(LOAD)
-	mov		TH0, #HIGH(LOAD)
+	mov	TL0, #LOW(LOAD)
+	mov	TH0, #HIGH(LOAD)
 	
 	push	PSW
 	push	ACC
@@ -51,7 +51,7 @@ T0_int:
 
 update_time:
 	setb	SEC_CHANGE
-	mov		CNT_100, #0
+	mov	CNT_100, #0
 		
 update_seconds:
 	inc 	SEC
@@ -70,8 +70,8 @@ update_seconds:
 	mov 	HOUR, #0
 		
 update_seconds_end:
-	pop		PSW
-	pop		ACC
+	pop	ACC
+	pop	PSW
 	
 	reti
 
@@ -80,13 +80,23 @@ update_seconds_end:
 ;---------------------------------------------------------------------
 start:
 	mov 	ALARM_DURATION, #10
-	lcall	lcd_init		; inicjowanie wyswietlacza
+	mov	LEDS, #11111111b	; wylaczenie ledow na wszelki wypadek
+	lcall	lcd_init			; inicjowanie wyswietlacza
+	lcall	timer_init
+	lcall	clock_init
 
 ;---------------------------------------------------------------------
 ; Petla glowna programu
 ;---------------------------------------------------------------------
 main_loop:
-
+	jnb SEC_CHANGE, other_tasks	;if sec_change == 0, rob pozostale zadania
+	clr SEC_CHANGE
+	lcall clock_display
+	lcall clock_alarm
+	
+other_tasks:
+	;...
+	
 	sjmp	main_loop
 
 ;---------------------------------------------------------------------
@@ -123,7 +133,7 @@ clock_init:
 	mov 	ALARM_MIN,	#0
 	mov 	ALARM_HOUR,	#0
 	
-	mov		CNT_100, #99
+	mov	CNT_100, #0
 
 	ret
 
@@ -131,44 +141,42 @@ clock_init:
 ; Wyswietlanie czasu - pamietac ze na poczatku programu dodac lcd_init
 ;---------------------------------------------------------------------
 clock_display:
-	mov	A, #04h		
+	mov	A, SEC
+	jb	ACC.0, dwukropek
+	mov	R0, #' '
+	sjmp	next
+dwukropek:
+	mov	R0, #':'
+next:
+
 ;------- ustawienie pozycji wyswietlania
-lcd_gotoxy:
-	jnb		ACC.4, lcd_gotoxy_skip		; jesli adres w linii 1 to adres taki jak wspolrzedna x, w przeciwnym wypadku 14 -> 44 czyli 0001 0100 -> 0100 0100
-	setb	ACC.6
-	clr		ACC.4
-lcd_gotoxy_skip:
-	setb	ACC.7						; bit komendy
-	lcall	lcd_write_cmd
+	mov	A, #04h		
+	lcall	lcd_gotoxy
 	
 ;------- wyswietlenie godzin
-	mov		A, HOUR			; wyswietlenie liczby
+	mov	A, HOUR			; wyswietlenie liczby
 	lcall	lcd_dec_2
 
 ;------- wyswietlenie dwukropka rozdzielajacego godziny i minuty
-	mov		A, SEC
-	jb		ACC.0, minuty
-	mov		DPTR, #text_dwukropek	; wyswietlenie tekstu
-	lcall	lcd_puts
+	mov	A, R0
+	lcall lcd_write_data
 	
 ;------- wyswietlenie minut
 minuty:
-	mov		A, MIN			; wyswietlenie liczby
+	mov	A, MIN			; wyswietlenie liczby
 	lcall	lcd_dec_2
 
 ;------- wyswietlenie dwukropka rozdzielajacego godziny i sekundy
-	mov		A, SEC
-	jb		ACC.0, sekundy
-	mov		DPTR, #text_dwukropek	; wyswietlenie tekstu
-	lcall	lcd_puts
+	mov	A, R0
+	lcall lcd_write_data
 	
 sekundy:	
 ;------- wyswietlenie sekund
-	mov		A, SEC			; wyswietlenie liczby
+	mov	A, SEC			; wyswietlenie liczby
 	lcall	lcd_dec_2
 
-	ret
-	
+	ret	
+
 ;---------------------------------------------------------------------
 ; Wejscie: A - kod komendy
 lcd_write_cmd:
@@ -223,7 +231,7 @@ lcd_write_data:
 	push	ACC			; chornione sa DPTR oraz ACC
 check_stat_loop_2:	
 	mov		DPTR, #RD_STAT
-	movx	A, @DPTR
+	movx		A, @DPTR
 	JB		ACC.7, check_stat_loop_2			; sprawdzanie statusu wyswietlacza
 	
 	mov		DPTR, #WR_DATA
@@ -246,43 +254,68 @@ lcd_init:
 	mov		A, #00000001b		; wyczyszczenie wyswietlacza
 	lcall	lcd_write_cmd
 	ret
+
+;---------------------------------------------------------------------
+lcd_gotoxy:
+	jnb	ACC.4, lcd_gotoxy_skip		; jesli adres w linii 1 to adres taki jak wspolrzedna x, w przeciwnym wypadku 14 -> 44 czyli 0001 0100 -> 0100 0100
+	setb	ACC.6
+	clr	ACC.4
+lcd_gotoxy_skip:
+	setb	ACC.7						; bit komendy
+	lcall	lcd_write_cmd
+	ret
+		
 ;---------------------------------------------------------------------
 
 ;---------------------------------------------------------------------
 ; Obsluga alarmu
 ;---------------------------------------------------------------------
 clock_alarm:
-	jnb		ALARM, clock_alarm_duration		; jesli alarm zostal juz uruchomiony
-	
-	mov		A, SEC
+	jnb	ALARM, clock_alarm_duration		; jesli alarm zostal juz uruchomiony
+
+	mov	A, SEC
 	cjne 	A, ALARM_SEC, clock_alarm_return
 	
-	mov		A, MIN
+	mov	A, MIN
 	cjne 	A, ALARM_MIN, clock_alarm_return
 	
-	mov  	A,	HOUR
-	cjne 	A,	ALARM_HOUR, clock_alarm_return
+	mov  	A, HOUR
+	cjne 	A, ALARM_HOUR, clock_alarm_return
 	
 	clr  	ALARM				; alarm zostaje wlaczony - sygnalizacja
-	dec		ALARM_DURATION
+
+;---------wyswietlanie napisu------
+	mov	A, #15h
+	lcall 	lcd_gotoxy
+	mov	DPTR, #text_alarm
+	lcall 	lcd_puts	
+;---------wyswietlanie napisu------	
+	
+	mov	ALARM_DURATION, #10			; ustawienie licznika alarmu
 	sjmp	clock_alarm_return
 
 clock_alarm_duration:
-	dec		ALARM_DURATION
-	mov		A, ALARM_DURATION
-	jnz		clock_alarm_return	
+	djnz	ALARM_DURATION, clock_alarm_return	
 	
 clock_alarm_off:
-	jb   	ALARM,	clock_alarm_return		; alarm wylaczony -> nie - powrot/ tak - wylacz
 	setb 	ALARM
-	mov		ALARM_DURATION, #10				; reset licznika
+
+;---------czyszczenie napisu------
+	 mov	A, #15h
+	 lcall 	lcd_gotoxy
+	 mov	R0, #6
+disp_clear:
+	mov	A, #' '
+	lcall 	lcd_write_data		 
+	djnz	R0, disp_clear
+;---------czyszczenie napisu------
 
 clock_alarm_return:
 	ret
 
 ;---------------------------------------------------------------------
-text_dwukropek:
-	db	':', 0
+text_alarm:
+	db	'ALARM!', 0
 ; alokacja pamieci na liczbe do wypisania
 RSEG	X_DATA
 number_print1:
