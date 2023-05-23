@@ -62,7 +62,6 @@ kbd_read_row:
 
 row_loop:
 	jnb		ACC.0, end_read_row
-	
 	rr		A					
 	inc		R1					; zwiekszamy kod klawisza
 	sjmp	row_loop
@@ -81,7 +80,28 @@ end_read_row:
 ; 	   A - kod klawisza (0 .. 15)
 ;---------------------------------------------------------------------
 kbd_read:
+	mov		R2, #0			; licznik wierszy
 
+kbd_row_loop:
+	mov		A, R2			; zaczynamy od pierwszego wiersza
+	lcall	kbd_read_row
+	jc		kbd_calc_code		; jesli klawisz wcisniety, przechodzimy do obliczenia kodu
+	
+	inc		R2
+	cjne	R2, #4, kbd_row_loop	; sprawdzamy czy licznik wierszy jest w zakresie
+	sjmp	end_kbd_read
+	
+kbd_calc_code:
+	mov		R3, A			; kopiujemy kod klawisza w wierszu (0-3)
+	mov		A, R2			; przenosimy numer wiersza z licznika
+	
+	rl		A
+	rl		A				; mnozenie nr wiersza * 4
+	
+	add		A, R3			; dodanie kodu klawisza w wierszu
+	setb	C				; sygnalizacje wcisniecia klawiszy
+
+end_kbd_read:
 	ret
 
 ;---------------------------------------------------------------------
@@ -91,7 +111,18 @@ kbd_read:
 ; 	   A  - kod klawisza (0 .. 15)
 ;---------------------------------------------------------------------
 kbd_display:
+	jc		set_leds
+	mov		R0, #11111111b
+	sjmp	end_kbd_display
 
+set_leds:
+	cpl		A
+	clr		ACC.7
+	mov		R0, A	
+	
+end_kbd_display:
+	mov		A, R0
+	mov		LEDS, A
 	ret
 
 END
