@@ -11,6 +11,7 @@ LEDS		EQU	P1		; diody LED na P1 (0=ON)
 ORG 0
 
 main_loop:
+
 	lcall	kbd_read
 	lcall	kbd_display
 	sjmp	main_loop
@@ -21,9 +22,10 @@ main_loop:
 ; Wejscie: A - numer wiersza (0 .. 3)
 ;---------------------------------------------------------------------
 kbd_select_row:
+	add		A, #1
 	mov		R0, A			; licznik wierszy
-	mov		A, #01111111b		; maska dla rotacji wybranego wiersza
-	cjne	R0, #4, check_cy	; sprawdzenie czy numer jest w zakresie 
+	mov		A, #11111110b		; maska dla rotacji wybranego wiersza
+	cjne	R0, #5, check_cy	; sprawdzenie czy numer jest w zakresie 
 
 check_cy:	
 	jc		set_row				; jesli jest w zakresie, zaczynamy petle
@@ -35,6 +37,7 @@ set_row:
 	djnz	R0, set_row
 
 end_select_row:	
+	orl		ROWS, #11110000b
 	anl		ROWS, A
 
 	ret
@@ -61,7 +64,7 @@ kbd_read_row:
 	sjmp 	end_read_row		; nie zostal wybrany wiersz, konczymy
 
 row_loop:
-	jnb		ACC.0, end_read_row
+	jnb		ACC.0, end_row_loop
 	rr		A					
 	inc		R1					; zwiekszamy kod klawisza
 	sjmp	row_loop
@@ -72,6 +75,28 @@ end_row_loop:
 
 end_read_row:
 	ret
+
+;kbd_read_row:
+;	lcall kbd_select_row
+;	clr C
+;	
+;	mov	A, COLS		
+;	mov	R1, #0			; licznik odczytanych kolumn
+;	mov R0, #4
+;	
+;row_loop:
+;	jnb ACC.0, exit_row_loop	; rotujemy kolumny poki nie znajdziemy wcisniejty klawisz
+;	rr	A
+;	inc	R1			; zwiekszamy kod klawiszy
+;	djnz R0, row_loop
+;	sjmp exit_kbd_read_row
+;	
+;exit_row_loop:
+;	setb C			; wlaczamy sygnalizacje wcisnietej klawiszy
+;	mov	A, R1			; przenosimy kod wybranej klawiszy do akumulatora
+;	
+;exit_kbd_read_row:
+;	ret
 
 ;---------------------------------------------------------------------
 ; Odczyt calej klawiatury
